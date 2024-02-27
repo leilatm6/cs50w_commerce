@@ -3,12 +3,35 @@ from django.db import IntegrityError
 from django.http import HttpResponse, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
-
-from .models import User
+from django.core.exceptions import ObjectDoesNotExist
+from .models import User, Products, Category
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
 
 
 def index(request):
     return render(request, "auctions/index.html")
+
+
+@login_required
+def createlisting(request):
+    if request.method == "POST":
+        title = request.POST["title"]
+        price = request.POST["price"]
+        description = request.POST["description"]
+        imageurl = request.POST["imageurl"]
+        try:
+            category = Category.objects.get(pk=request.POST["category"])
+        except ObjectDoesNotExist:
+            category = None
+        print(category)
+        newproduct = Products(title=title, initialprice=price, description=description, datetime=timezone.now(),
+                              category=category, imageurl=imageurl, creatoruser=request.user)
+        newproduct.save()
+        return HttpResponseRedirect(reverse("index"))
+    return render(request, "auctions/createlisting.html", {
+        'category': Category.objects.all()
+    })
 
 
 def login_view(request):
